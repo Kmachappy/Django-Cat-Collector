@@ -28,11 +28,13 @@ def cats_index(request):
 
 def cats_detail(request, cat_id):
   cat = Cat.objects.get(id=cat_id)
+  toys_cat_doesnt_have = Toy.objects.exclude(id__in=cat.toys.all().values_list('id'))
+  print(toys_cat_doesnt_have)
   # instantiate FeedingForm to be rendered in the template
   feeding_form = FeedingForm()
   return render(request, 'cats/detail.html', {
     # pass the cat and feeding_form as context
-    'cat': cat, 'feeding_form': feeding_form
+    'cat': cat, 'feeding_form': feeding_form, 'toys': toys_cat_doesnt_have
   })
 
 def add_feeding(request, cat_id):
@@ -45,6 +47,10 @@ def add_feeding(request, cat_id):
     new_feeding = form.save(commit=False)
     new_feeding.cat_id = cat_id
     new_feeding.save()
+  return redirect('detail', cat_id=cat_id)
+
+def assoc_toy(request, cat_id, toy_id):
+  Cat.objects.get(id=cat_id).toys.add(toy_id)
   return redirect('detail', cat_id=cat_id)
 
 class ToyList(ListView):
