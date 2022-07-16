@@ -1,8 +1,16 @@
 from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic import ListView, DetailView
-from .models import Cat, Toy
+from .models import Cat, Toy, Photo
 from .forms import FeedingForm
+import uuid
+import boto3
+
+from .forms import FeedingForm
+
+# Add these "constants" below the imports
+S3_BASE_URL = 'https://s3-us-west-1.amazonaws.com/'
+BUCKET = 'cat-collector-s4383'
 
 class CatCreate(CreateView):
   model = Cat
@@ -48,6 +56,40 @@ def add_feeding(request, cat_id):
     new_feeding.cat_id = cat_id
     new_feeding.save()
   return redirect('detail', cat_id=cat_id)
+
+def add_photo(request, cat_id):
+  # photo-file was added to request.FILES
+  photo_file = request.FILES.get('photo-file', None)
+  print('this is photo file', photo_file)
+  # if photo-file is not empty
+  # do the following
+  if photo_file:
+    # get boto3 client for S3 and set up the bucket name and file name for the photo file to be uploaded to S3
+    s3 = boto3.client('s3')
+    print('this is s3', s3)
+    #  create a unique "key" for the object in S3
+    key = uuid.uuid4().hex[:6] + photo_file.name[photo_file.name.rfind('.'):]
+    print('this is key', key)
+    # try to upload the file to S3 
+    try:
+      # first, upload the file to S3  and get the url of the file
+      s3.upload_fileobj(photo_file, BUCKET, key)
+      # print('this is s3', s3.upload_fileobj(photo_file, BUCKET, key))
+      # url of the file in S3 (for the photo) is the base url + the key
+      url = f"{S3_BASE_URL}{BUCKET}/{key}"
+      print('this is url', url)
+      #  create a new photo object and save it to the db
+      photo = Photo(url=url, cat_id=cat_id)
+      print('this is photo', photo)
+      #  save the photo to the db and redirect to the detail view
+      photo.save()
+    except:
+      #  if there is an error, print it to the console 
+      print('An error occurred uploading file to S3')
+  # redirect to the detail view for the cat
+  return redirect('detail', cat_id=cat_id)
+    
+    
 
 def assoc_toy(request, cat_id, toy_id):
   Cat.objects.get(id=cat_id).toys.add(toy_id)

@@ -19,6 +19,7 @@ class Toy(models.Model):
     return reverse('toys_detail', kwargs={'pk': self.id})
 
 class Cat(models.Model):
+  # print(models.Model)
   name = models.CharField(max_length=100)
   breed = models.CharField(max_length=100)
   description = models.TextField(max_length=250)
@@ -50,3 +51,10 @@ class Feeding(models.Model):
   # change the default sort
   class Meta:
     ordering = ['-date']
+
+class Photo(models.Model):
+  url = models.CharField(max_length=200)
+  cat = models.ForeignKey(Cat, on_delete=models.CASCADE)
+  
+  def __str__(self):
+    return f"Photo for {self.cat.name} @{self.url}"
